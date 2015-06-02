@@ -1,0 +1,41 @@
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity exercicio1_tb is
+end exercicio1_tb;
+
+architecture arq1_tb of exercicio1_tb is
+	signal ma: std_logic_vector(7 downto 0);
+	signal mdesl: std_logic;
+	signal mlado: std_logic;
+	signal mc: std_logic_vector(7 downto 0);
+begin
+	vector: entity work.exercicio1
+	port map (
+		a => ma,
+		desl => mdesl,
+		lado => mlado,
+		c => mc
+	);
+
+	process
+	begin
+		ma <= "01001001";
+		mdesl <= '0';
+		mlado <= '0'
+		wait for 50 ns;
+
+		mdesl <= '0';
+		mlado <= '1'
+		wait for 50 ns;
+
+		mdesl <= '1';
+		mlado <= '0'
+		wait for 50 ns;
+
+		mdesl <= '1';
+		mlado <= '1'
+		wait for 50 ns;
+		wait;
+	end process;
+end arq1_tb;

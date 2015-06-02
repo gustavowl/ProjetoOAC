@@ -1,0 +1,15 @@
+vlib work
+vmap work
+
+vcom exercicio1.vhd
+vcom exercicio1_tb.vhd
+
+vsim exercicio1_tb
+
+add wave /exercicio1_tb/ma
+add wave /exercicio1_tb/mdesl
+add wave /exercicio1_tb/mlado
+add wave /exercicio1_tb/mc
+
+view wave
+run 300 ns

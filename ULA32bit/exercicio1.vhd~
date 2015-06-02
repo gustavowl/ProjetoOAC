@@ -1,0 +1,24 @@
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity exercicio1 is
+	port (
+		a: in std_logic_vector(7 downto 0);
+		desl: in std_logic; --desloca
+		lado: in std_logic; --0 divide 1 multiplica
+		c: out std_logic_vector(7 downto 0)
+	);
+end exercicio1;
+
+architecture arq1 of exercicio1 is
+begin
+	if (desl = '1') then
+		if lado = '0' then
+			c <= '0' & a(7 downto 1);
+		else
+			c <= a(6 downto 0) & '0';
+		end if;
+	else
+		c <= a(7 downto 0);
+	end if;
+end arq1;

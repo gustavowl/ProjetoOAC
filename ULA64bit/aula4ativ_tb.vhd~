@@ -1,0 +1,27 @@
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity exercicio1a_tb is
+end exercicio1a_tb;
+
+architecture arq1a_tb of exercicio1a_tb is
+	signal mA: bit_vector(0 to 3);
+	signal mB: bit_vector(0 to 3);
+	signal Saida: bit_vector(0 to 3);
+begin
+	vector: entity work.exercicio1a
+	port map (
+		a => mA,
+		b => mB,
+		c => Saida
+	);
+
+	process
+	begin
+		mA <= "0011";
+		mB <= "0101";
+		wait for 50 ns;
+		wait;
+	end process;
+end arq1a_tb;
+
