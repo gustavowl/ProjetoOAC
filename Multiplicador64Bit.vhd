@@ -419,7 +419,157 @@ architecture ula of ula is
 		done, state: out std_logic
 	);
 	end component;
+
 begin
 	ulapo: ula_po port map (a, b, x, y, z, s, couterro);
 	ulapc: ula_pc port map (clk, do_op, done, state);
 end ula;
+
+-----------------------------------------------------------------------
+-----------------------------DESLOCADOR--------------------------------
+-----------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity deslocador32 is
+	port (
+		a: in std_logic_vector(31 downto 0);
+		desl: in std_logic; --desloca
+		lado: in std_logic; --0 divide 1 multiplica
+		c: out std_logic_vector(31 downto 0);
+		cout: out std_logic
+	);
+end deslocador32;
+
+architecture deslocador32 of deslocador32 is
+begin
+	c <= a(31 downto 0) when desl = '0' else
+		'0' & a(31 downto 1) when lado = '0' else
+		a(30 downto 0) & '0';
+	cout <= a(30) when lado = '1' and desl = '1' else '0';
+end deslocador32;
+
+--REGISTRADOR 32 BIT
+
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity reg_paraleload32 is
+	port ( i: in std_logic_vector (31 downto 0);
+		clk, ld, rst: in std_logic; --load: 1: escrita, 0: leitura
+		q: out std_logic_vector (31 downto 0)
+	);
+end;
+
+architecture reg_paraleload32 of reg_paraleload32 is
+begin
+	q <=  "00000000000000000000000000000000" when (clk'event and clk = '1' and rst = '1') else
+		i when ( clk'event and clk = '1' and ld = '1' );
+end reg_paraleload32;
+
+--REGISTRADOR 64 BIT
+
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity reg_paraleload64 is
+	port ( i: in std_logic_vector (63 downto 0);
+		clk, ld, rst: in std_logic; --load: 1: escrita, 0: leitura
+		q: out std_logic_vector (63 downto 0)
+	);
+end;
+
+architecture reg_paraleload64 of reg_paraleload64 is
+begin
+	q <=  "0000000000000000000000000000000000000000000000000000000000000000" when (clk'event and clk = '1' and rst = '1') else
+		i when ( clk'event and clk = '1' and ld = '1' );
+end reg_paraleload64;
+
+--MULTIPLICADOR
+
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity mult64 is
+	port ( multiplicando: in std_logic_vector (63 downto 0);
+		multiplicador: in std_logic_vector (31 downto 0);
+		clk, start: in std_logic; --load: 1: escrita, 0: leitura
+		produto: out std_logic_vector (63 downto 0);
+		done: out std_logic
+	);
+end;
+
+architecture mult64 of mult64 is
+	component reg_paraleload32 	port (
+		i: in std_logic_vector (31 downto 0);
+		clk, ld, rst: in std_logic; --load: 1: escrita, 0: leitura
+		q: out std_logic_vector (31 downto 0)
+	);
+	end component;
+	component reg_paraleload64 	port (
+		i: in std_logic_vector (63 downto 0);
+		clk, ld, rst: in std_logic; --load: 1: escrita, 0: leitura
+		q: out std_logic_vector (63 downto 0)
+	);
+	end component;
+	component deslocador32 port (
+		a: in std_logic_vector(31 downto 0);
+		desl: in std_logic; --desloca
+		lado: in std_logic; --0 divide 1 multiplica
+		c: out std_logic_vector(31 downto 0);
+		cout: out std_logic
+	);
+	end component;
+	component deslocador port (
+		a: in std_logic_vector(63 downto 0);
+		desl: in std_logic; --desloca
+		lado: in std_logic; --0 divide 1 multiplica
+		c: out std_logic_vector(63 downto 0);
+		cout: out std_logic
+	);
+	end component;
+	component ula port (
+		a: in std_logic_vector(63 downto 0);
+		b: in std_logic_vector(63 downto 0);
+		x, y, z, clk, do_op: in std_logic;
+		s: out std_logic_vector(63 downto 0);
+		couterro, done, state: out std_logic
+	);
+	end component;
+
+	signal st, reset, over, cout, cout2, sum, cout3, useless1, useless2, resetaux, overwriteresult: std_logic; --st[0: reset | 1: doing operation]
+	signal desl64in, desl64out, ulain, ulaout, reg64m_in, ulain_mult: std_logic_vector(63 downto 0);
+	signal desl32in, desl32out, reg32_in: std_logic_vector(31 downto 0);
+begin
+	PROCESS (clk)
+	BEGIN
+		if (clk'event and clk = '1') then
+			if (start = '1' and not(st = '1')) then
+				st <= '1';
+				--over <= '0';
+			elsif (st = '1' and over = '1') then
+				st <= '0';
+			end if;
+		end if;
+	END PROCESS;
+	reset <= '1' when st = '0' or st = 'U' else '0';
+	reg64m_in <= multiplicando when reset = '1' else desl64out;
+	reg64m: reg_paraleload64 port map (reg64m_in, clk, '1', '0', desl64in);
+	desl64: deslocador port map(desl64in, '1', '1', desl64out, cout);
+	resetaux <= '1' when reset = '1' or ulaout = "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU" else '0';
+	overwriteresult <= '1' when over = '0' else '0';
+	reg64p: reg_paraleload64 port map (ulaout, clk, overwriteresult, resetaux, ulain);
+	reg32_in <= multiplicador when reset = '1' else desl32out;
+	--reg32_in <= "01110111011101110111011101110111" when reset = '0' else multiplicador;
+	reg32: reg_paraleload32 port map(reg32_in, clk, '1', '0', desl32in);
+	desl32: deslocador32 port map (desl32in, '1', '0', desl32out, cout2);
+	sum <= desl32in(0);
+	ulain_mult <= desl64in when sum = '1' else "0000000000000000000000000000000000000000000000000000000000000000";
+	alu: ula port map (ulain_mult, ulain, '0', '0', '0', clk, sum, ulaout, cout3, useless1, useless2);
+	over <= '1' when desl32in = "00000000000000000000000000000000" else '0';
+	produto <= ulaout;
+	--produto <= "00000000000000000000000000000000" & desl32in;
+	done <= over;
+	--done <= sum;
+	--done <= '1' when desl32in = "00000000000000000000000000000000" else '0';
+end mult64;
